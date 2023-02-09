@@ -3,70 +3,79 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
+	"strconv"
 	"time"
 )
 
-// Define the structure of a block
+// Block represents a block in the blockchain
 type Block struct {
-    Index int
-    Timestamp string
-    BPM int
-    Hash string
-    PrevHash string
+	Index        int
+	Timestamp    string
+	Data         string
+	PrevBlockHash string
+	Hash         string
 }
 
-// Blockchain is a slice of blocks
+// Blockchain represents a chain of blocks
 var Blockchain []Block
 
-// Calculate the hash of a block
-func calculateHash(block Block) string {
-    record := string(block.Index) + block.Timestamp + string(block.BPM) + block.PrevHash
-    h := sha256.New()
-    h.Write([]byte(record))
-    hashed := h.Sum(nil)
-    return hex.EncodeToString(hashed)
+// CalculateHash is a function that calculates the SHA256 hash of a block
+func (b *Block) CalculateHash() string {
+	record := strconv.Itoa(b.Index) + b.Timestamp + b.Data + b.PrevBlockHash
+	h := sha256.New()
+	h.Write([]byte(record))
+	hashed := h.Sum(nil)
+	return hex.EncodeToString(hashed)
 }
 
-// Generate a new block
-func generateBlock(oldBlock Block, BPM int) (Block, error) {
-    var newBlock Block
-
-    t := time.Now()
-
-    newBlock.Index = oldBlock.Index + 1
-    newBlock.Timestamp = t.String()
-    newBlock.BPM = BPM
-    newBlock.PrevHash = oldBlock.Hash
-    newBlock.Hash = calculateHash(newBlock)
-
-    return newBlock, nil
+// GenerateBlock creates a new block in the blockchain
+func GenerateBlock(oldBlock Block, data string) Block {
+	var newBlock Block
+	newBlock.Index = oldBlock.Index + 1
+	newBlock.Timestamp = time.Now().String()
+	newBlock.Data = data
+	newBlock.PrevBlockHash = oldBlock.Hash
+	newBlock.Hash = newBlock.CalculateHash()
+	return newBlock
 }
 
-// Validate a block
-func isBlockValid(newBlock, oldBlock Block) bool {
-    if oldBlock.Index+1 != newBlock.Index {
-        return false
-    }
+// IsBlockValid checks if a block is valid by comparing its hash to the calculated hash
+func IsBlockValid(newBlock, oldBlock Block) bool {
+	if oldBlock.Index+1 != newBlock.Index {
+		return false
+	}
 
-    if oldBlock.Hash != newBlock.PrevHash {
-        return false
-    }
+	if oldBlock.Hash != newBlock.PrevBlockHash {
+		return false
+	}
 
-    if calculateHash(newBlock) != newBlock.Hash {
-        return false
-    }
+	if newBlock.CalculateHash() != newBlock.Hash {
+		return false
+	}
 
-    return true
+	return true
 }
 
-// Handle block chain updates
-func replaceChain(newBlocks []Block) {
-    if len(newBlocks) > len(Blockchain) {
-        Blockchain = newBlocks
-    }
+// ReplaceChain replaces the chain with a new chain if the new chain is longer and valid
+func ReplaceChain(newBlocks []Block) {
+	if len(newBlocks) > len(Blockchain) {
+		Blockchain = newBlocks
+	}
 }
 
 func main() {
-    genesisBlock := Block{0, time.Now().String(), 0, "", ""}
-    Blockchain = []Block{genesisBlock}
+	fmt.Println("Starting blockchain implementation in Go")
+	Blockchain = append(Blockchain, Block{0, time.Now().String(), "Initial Block", "", ""})
+	fmt.Println("Initial Blockchain: ", Blockchain)
+
+	// Simulate adding new blocks to the blockchain
+	for i := 1; i <= 10; i++ {
+		newBlock := GenerateBlock(Blockchain[len(Blockchain)-1], "Block Data "+strconv.Itoa(i))
+		if IsBlockValid(newBlock, Blockchain[len(Blockchain)-1]) {
+			Blockchain = append(Blockchain, newBlock)
+		}
+	}
+
+	fmt.Println("Final Blockchain: ", Blockchain)
 }
